@@ -73,11 +73,52 @@ func CreateAccount(db *sql.DB) http.HandlerFunc {
 	}	
 }
 
-func UpdateAccount() http.HandlerFunc {
+func UpdateAccount(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Halaman Update Account"))
+			if r.Method != http.MethodPut{
+				w.Write([]byte("Halaman Update Account"))
+			} else {
+				idStr := r.PathValue("id")
+				id, err := strconv.ParseInt(idStr, 10, 64)
+				if err != nil {
+					http.Error(w, "ID harus berupa angka", http.StatusBadRequest)
+					return
+				}
+
+				balanceStr := r.FormValue("balance")
+				balance,err := strconv.ParseFloat(balanceStr,64)
+				
+				if err != nil {
+					w.Write([]byte("Error parsing balance"))
+					return
+				}
+				accounts := models.Account{
+					Id: id,
+					Name: r.FormValue("name"),
+					Balance: balance,
+
+				}
+				_, err = db.Exec(`
+					UPDATE accounts
+					SET
+						name = ?,
+						balance = ?
+					WHERE id = ?
+				`, accounts.Name, accounts.Balance, accounts.Id)
+
+				if err != nil {
+					w.Write([]byte("Error update account"))
+					return
+				}
+				w.Write([]byte("Account updated successfully"))
+			}
+			
+
+			
+
 	}	
 }
+
 
 func DeleteAccount() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
