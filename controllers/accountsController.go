@@ -12,116 +12,139 @@ import (
 
 func IndexAccounts(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query(`SELECT id,name,balance,create_at,update_at FROM accounts`)
+		var accounts []models.Account
+
+		stmt, err := db.Prepare(`SELECT id,name,balance,create_at,update_at FROM accounts`)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer stmt.Close()
+
+		rows, err := stmt.Query()
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer rows.Close()
-		var accounts []models.Account
-		for rows.Next(){
+
+		for rows.Next() {
 			var a models.Account
-
 			err := rows.Scan(&a.Id, &a.Name, &a.Balance, &a.CreateAt, &a.UpdateAt)
-
 			if err != nil {
 				log.Fatal(err)
 			}
 			accounts = append(accounts, a)
 		}
 
-		if err := rows.Err(); err != nil{
+		if err := rows.Err(); err != nil {
 			log.Fatal(err)
 		}
 
-		 json.NewEncoder(w).Encode(accounts)
+		json.NewEncoder(w).Encode(accounts)
 	}
 }
 
-func ShowAccount() http.HandlerFunc{
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Halaman Detail Account"))
-	}	
+func ShowAccount(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Halaman Detail Account"}`))
 }
 
 func CreateAccount(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-	 if r.Method != http.MethodPost{
-		w.Write([]byte("Halaman Create Account"))
-	 } else {
+		if r.Method != http.MethodPost {
+			w.Write([]byte("Halaman Create Account"))
+			return
+		}
+
+		name := r.FormValue("name")
 		balanceStr := r.FormValue("balance")
-	 	balance, err := strconv.ParseFloat(balanceStr, 64)
-	 	if err != nil {
-		 	w.Write([]byte(" Error parsing balance"))
-		 	return
-		 }
 
-	 	accounts := models.Account{
-		Name: r.FormValue("name"),
-		Balance: balance,
-	 	}
+		balance, err := strconv.ParseFloat(balanceStr, 64)
+		if err != nil {
+			http.Error(w, "Error parsing balance", http.StatusBadRequest)
+			return
+		}
 
-		
+		stmt, err := db.Prepare("INSERT INTO accounts (name, balance) VALUES (?, ?)")
+		if err != nil {
+			http.Error(w, "Error preparing query", http.StatusInternalServerError)
+			return
+		}
+		defer stmt.Close()
 
-		 _, err = db.Exec("INSERT INTO accounts (name, balance) VALUES (?, ?)", accounts.Name, accounts.Balance)
-	 	if err != nil {
-			 w.Write([]byte("Error creating account"))
-		 	return
-	 	}
-	 
-	 	w.Write([]byte("Account created successfully"))
+		_, err = stmt.Exec(name, balance)
+		if err != nil {
+			http.Error(w, "Error creating account", http.StatusInternalServerError)
+			return
+		}
+
+		w.Write([]byte("Account created successfully"))
 	}
-	}	
 }
 
 func UpdateAccount(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPut{
-				w.Write([]byte("Halaman Update Account"))
-			} else {
-				idStr := r.PathValue("id")
-				id, err := strconv.ParseInt(idStr, 10, 64)
-				if err != nil {
-					http.Error(w, "ID harus berupa angka", http.StatusBadRequest)
-					return
-				}
+		if r.Method != http.MethodPut {
+			w.Write([]byte("Halaman Update Account"))
+			return
+		}
 
-				balanceStr := r.FormValue("balance")
-				balance,err := strconv.ParseFloat(balanceStr,64)
-				
-				if err != nil {
-					w.Write([]byte("Error parsing balance"))
-					return
-				}
-				accounts := models.Account{
-					Id: id,
-					Name: r.FormValue("name"),
-					Balance: balance,
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			http.Error(w, "ID harus berupa angka", http.StatusBadRequest)
+			return
+		}
 
-				}
-				_, err = db.Exec(`
-					UPDATE accounts
-					SET
-						name = ?,
-						balance = ?
-					WHERE id = ?
-				`, accounts.Name, accounts.Balance, accounts.Id)
+		stmt, err := db.Prepare(`
+			UPDATE accounts
+			SET name = ?, balance = ?
+			WHERE id = ?
+		`)
+		if err != nil {
+			http.Error(w, "Error preparing query", http.StatusInternalServerError)
+			return
+		}
+		defer stmt.Close()
 
-				if err != nil {
-					w.Write([]byte("Error update account"))
-					return
-				}
-				w.Write([]byte("Account updated successfully"))
-			}
-			
+		_, err = stmt.Exec(r.FormValue("name"), r.FormValue("balance"), id)
+		if err != nil {
+			http.Error(w, "Error update account", http.StatusInternalServerError)
+			return
+		}
 
-			
-
-	}	
+		w.Write([]byte("Account updated successfully"))
+	}
 }
 
 
-func DeleteAccount() http.HandlerFunc {
+func DeleteAccount(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Halaman Delete Account"))
-	}	
+
+		if r.Method != http.MethodDelete {
+			w.Write([]byte("Halaman Delete Account"))
+			return
+		}
+
+		idStr := r.PathValue("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			http.Error(w, "ID harus berupa angka", http.StatusBadRequest)
+			return
+		}
+
+		stmt, err := db.Prepare("DELETE FROM accounts WHERE id = ?")
+		if err != nil {
+			http.Error(w, "Error preparing query", http.StatusInternalServerError)
+			return
+		}
+		defer stmt.Close()
+
+		_, err = stmt.Exec(id)
+		if err != nil {
+			http.Error(w, "Error deleting account", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
