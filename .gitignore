@@ -1,0 +1,27 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+
+# Build output
+/build
+/bin
+
+# Dependencies
+/vendor/
+
+# Environment files
+.env
+
+# IDE/editor specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.log
