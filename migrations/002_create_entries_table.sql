@@ -22,3 +22,14 @@ DELETE FROM entries WHERE id = 2;
 -- SELECT
 SELECT * FROM entries
 
+-- select where id = 3 join with accounts table
+SELECT e.id, e.account_id, e.amount, e.create_at, e.update_at, a.name, a.balance
+FROM entries e
+JOIN accounts a ON e.account_id = a.id
+WHERE e.id = 3
+
+
+SELECT e.id, e.account_id, e.amount, e.create_at, e.update_at, a.name, a.balance
+		FROM entries e
+		JOIN accounts a ON e.account_id = a.id
+

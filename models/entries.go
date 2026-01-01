@@ -7,4 +7,6 @@ type Entry struct {
 	Amount float64 `json:"amount"`
 	CreateAt string `json:"create_at"`
 	UpdateAt string `json:"update_at"`
+	Name string `json:"name"`
+	Balance float64 `json:"balance"`
 }
