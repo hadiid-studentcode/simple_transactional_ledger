@@ -43,9 +43,30 @@ func IndexAccounts(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func ShowAccount(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"message": "Halaman Detail Account"}`))
+
+func ShowAccount(db *sql.DB) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := r.PathValue("id")
+		id, err	:= strconv.ParseInt(idStr,10,64)
+		if err != nil{
+			http.Error(w,"ID harus berupa angka", http.StatusBadRequest)
+			return
+		}
+		stmt, err := db.Prepare("SELECT id,name,balance,create_at,update_at FROM accounts WHERE id = ?")
+		if err != nil {
+			http.Error(w,"Error Preparing Query",http.StatusInternalServerError)
+			return
+		}
+		defer stmt.Close()
+
+		var a models.Account
+		err = stmt.QueryRow(id).Scan(&a.Id, &a.Name, &a.Balance, &a.CreateAt, &a.UpdateAt)
+		if err != nil {
+			http.Error(w,"Error Executing Query",http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(a)
+	}
 }
 
 func CreateAccount(db *sql.DB) http.HandlerFunc {
