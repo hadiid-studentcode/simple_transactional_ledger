@@ -7,3 +7,18 @@ CREATE TABLE entries (
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE ON UPDATE CASCADE
     
 )
+
+SELECT * FROM accounts
+
+-- INSERT
+INSERT INTO entries (account_id, amount) VALUES (12, 100.00);
+
+-- UPDATE
+UPDATE entries SET amount = 200.00 WHERE id = 1;
+
+-- DELETE
+DELETE FROM entries WHERE id = 2;
+
+-- SELECT
+SELECT * FROM entries
+
